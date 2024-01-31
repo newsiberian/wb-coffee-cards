@@ -1,30 +1,47 @@
-<script>
-	export let name;
+<script lang="ts">
+  import { onDestroy, onMount } from 'svelte';
+  import { coffeeStore, loadingStore } from './store/coffee';
+  import Layout from './components/Layout/index.svelte';
+  import ButtonLayout from './components/ButtonLayout/index.svelte';
+  import Card from './components/Card/index.svelte';
+  import Button from './components/Button/index.svelte';
+
+  let buttonEl: HTMLButtonElement;
+  let seconds = 0;
+  const DURATION = 30;
+
+  const timerId = setInterval(() => {
+    if (seconds >= DURATION) {
+      coffeeStore.getCoffeeKind();
+      seconds = 0;
+    } else {
+      seconds++;
+    }
+  }, 1000);
+
+  onMount(coffeeStore.getCoffeeKind);
+
+  onDestroy(() => clearInterval(timerId));
+
+  const handleClick = () => {
+    loadingStore.update(() => true);
+    coffeeStore.getCoffeeKind().finally(() => {
+      loadingStore.update(() => false);
+      seconds = 0;
+      // we must wait until the button is moved to a new position
+      requestAnimationFrame(() => {
+        buttonEl.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+  };
 </script>
 
-<main>
-	<h1>Hello {name}!</h1>
-	<p>Visit the <a href="https://svelte.dev/tutorial">Svelte tutorial</a> to learn how to build Svelte apps.</p>
-</main>
+<Layout>
+  {#each $coffeeStore as coffee (coffee.id)}
+    <Card {...coffee} />
+  {/each}
 
-<style>
-	main {
-		text-align: center;
-		padding: 1em;
-		max-width: 240px;
-		margin: 0 auto;
-	}
-
-	h1 {
-		color: #ff3e00;
-		text-transform: uppercase;
-		font-size: 4em;
-		font-weight: 100;
-	}
-
-	@media (min-width: 640px) {
-		main {
-			max-width: none;
-		}
-	}
-</style>
+  <ButtonLayout>
+    <Button bind:ref={buttonEl} on:click={handleClick} />
+  </ButtonLayout>
+</Layout>
